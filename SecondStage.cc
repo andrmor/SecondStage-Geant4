@@ -1,0 +1,84 @@
+#include "SessionManager.hh"
+#include "DetectorConstruction.hh"
+#include "ActionInitialization.hh"
+
+#include "G4RunManager.hh"
+#include "G4UImanager.hh"
+#include "QGSP_BIC_HP.hh"
+#include "G4StepLimiterPhysics.hh"
+#include "G4VisExecutive.hh"
+#include "G4UIExecutive.hh"
+
+int main(int argc, char** argv)
+{
+    SessionManager& SM = SessionManager::getInstance();
+
+    SM.bGuiMode = false;
+    //SM.DetectorType = SessionManager::IdealDetectors;
+    SM.DetectorType = SessionManager::Scintillators;
+
+    long Seed = 111111;
+
+    SM.FileName_Input  = "/home/andr/tmp/OUTPUT2.txt";
+    SM.FileName_Output = "/home/andr/tmp/OUTPUT2_SecStage.txt";
+
+    CLHEP::RanecuEngine* randGen = new CLHEP::RanecuEngine();
+    randGen->setSeed(Seed);
+    G4Random::setTheEngine(randGen);
+
+    G4UIExecutive* ui =  0;
+    if (SM.bGuiMode) ui = new G4UIExecutive(argc, argv);
+
+    G4RunManager* runManager = new G4RunManager;
+
+    DetectorConstruction * theDetector = new DetectorConstruction();
+    runManager->SetUserInitialization(theDetector);
+
+    G4VModularPhysicsList* physicsList = new QGSP_BIC_HP;
+    physicsList->RegisterPhysics(new G4StepLimiterPhysics());
+    runManager->SetUserInitialization(physicsList);
+
+    runManager->SetUserInitialization(new ActionInitialization());
+
+    G4UImanager* UImanager = G4UImanager::GetUIpointer();
+    UImanager->ApplyCommand("/run/initialize");
+    UImanager->ApplyCommand("/control/verbose 0");
+    UImanager->ApplyCommand("/run/verbose 0");
+    if (SM.bGuiMode)
+    {
+        UImanager->ApplyCommand("/hits/verbose 2");
+        UImanager->ApplyCommand("/tracking/verbose 2");
+        UImanager->ApplyCommand("/control/saveHistory");
+    }
+
+    UImanager->ApplyCommand("/run/setCut 0.1 mm");
+    UImanager->ApplyCommand("/process/em/fluo true");
+    UImanager->ApplyCommand("/process/em/auger true");
+    UImanager->ApplyCommand("/process/em/augerCascade true");
+    UImanager->ApplyCommand("/process/em/pixe true");
+    UImanager->ApplyCommand("/process/em/deexcitationIgnoreCut false");
+
+    UImanager->ApplyCommand("/run/initialize");
+
+    SM.startSession();
+
+    G4VisManager* visManager = 0;
+
+    if (SM.bGuiMode)
+    {
+        visManager = new G4VisExecutive("Quiet");
+        visManager->Initialize();
+        UImanager->ApplyCommand("/control/execute vis.mac");
+        ui->SessionStart();
+    }
+    else
+    {
+        SM.runSimulation();
+    }
+
+    delete visManager;
+    delete runManager;
+    delete ui;
+
+    SM.endSession();
+}

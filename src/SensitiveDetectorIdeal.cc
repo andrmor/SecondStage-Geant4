@@ -34,7 +34,7 @@ G4bool SensitiveDetectorIdeal::ProcessHits(G4Step* aStep, G4TouchableHistory*)
          << preStep->GetKineticEnergy()/keV << ' '
          << preStep->GetGlobalTime()/ns;
 
-    SM.sendLineToOutput(text);
+    SM.sendLineToOutput(text); // format: Index Particle Energy[keV] Time[ns]
 
     aStep->GetTrack()->SetTrackStatus(fStopAndKill);
     return true;

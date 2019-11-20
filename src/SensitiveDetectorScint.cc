@@ -29,7 +29,7 @@ G4bool SensitiveDetectorScint::ProcessHits(G4Step* aStep, G4TouchableHistory*)
              << "Time: " << postStep->GetGlobalTime();
     */
 
-    std::stringstream text;
+    std::stringstream text;  // output format: Index Particle EnergyDeposition[keV] X[mm] Y[mm] Z[mm] Time[ns]
     text << postStep->GetPhysicalVolume()->GetCopyNo() << ' '
          << aStep->GetTrack()->GetParticleDefinition()->GetParticleName() << ' '
          << edep << ' '

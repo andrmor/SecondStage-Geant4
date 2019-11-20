@@ -40,9 +40,13 @@ void SessionManager::endSession()
 
 void SessionManager::runSimulation()
 {
+    int iCounter = 0;
     G4UImanager* UImanager = G4UImanager::GetUIpointer();
     while (!isEndOfInputFileReached())
     {
+        if (iCounter % 100 == 0)
+            std::cout << "Event # " << iCounter << std::endl;
+
         saveEventId();
         UImanager->ApplyCommand("/run/beamOn");
     }

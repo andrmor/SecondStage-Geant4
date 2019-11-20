@@ -14,8 +14,8 @@ int main(int argc, char** argv)
     SessionManager& SM = SessionManager::getInstance();
 
     SM.bGuiMode = false;
-    //SM.DetectorType = SessionManager::IdealDetectors;
-    SM.DetectorType = SessionManager::Scintillators;
+    //SM.DetectorType = SessionManager::IdealDetectors;  // output format: Index Particle Energy[keV] Time[ns]
+    SM.DetectorType = SessionManager::Scintillators;    // output format: Index Particle EnergyDeposition[keV] X[mm] Y[mm] Z[mm] Time[ns]
 
     long Seed = 111111;
 

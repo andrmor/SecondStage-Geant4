@@ -14,13 +14,13 @@ int main(int argc, char** argv)
     SessionManager& SM = SessionManager::getInstance();
 
     SM.bGuiMode = false;
-    SM.DetectorType = SessionManager::IdealDetectors;  // output format: Index Particle Energy[keV] Time[ns]
-    //SM.DetectorType = SessionManager::Scintillators;    // output format: Index Particle EnergyDeposition[keV] X[mm] Y[mm] Z[mm] Time[ns]
+    //SM.DetectorType = SessionManager::IdealDetectors;  // output format: Index Particle Energy[keV] Time[ns]
+    SM.DetectorType = SessionManager::Scintillators;    // output format: Index Particle EnergyDeposition[keV] Time[ns] X[mm] Y[mm] Z[mm]
 
     long Seed = 111111;
 
-    SM.FileName_Input  = "/home/andr/tmp/Output0.txt";
-    SM.FileName_Output = "/home/andr/tmp/Output0_SecStage_Ideal_111111.txt";
+    SM.FileName_Input  = "/home/andr/tmp/Target-0-222222.txt";
+    SM.FileName_Output = "/home/andr/tmp/SecStage_Scint_111111_of_Target-0-222222.txt";
 
     CLHEP::RanecuEngine* randGen = new CLHEP::RanecuEngine();
     randGen->setSeed(Seed);

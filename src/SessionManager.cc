@@ -124,7 +124,7 @@ void SessionManager::runSimulation()
     while (!isEndOfInputFileReached())
     {
         if (iCounter % 100 == 0)
-            std::cout << "Event # " << iCounter << std::endl;
+            std::cout << EventId << std::endl;
 
         saveEventId();
         UImanager->ApplyCommand("/run/beamOn");
@@ -186,7 +186,7 @@ std::vector<ParticleRecord> & SessionManager::getNextEventPrimaries()
         ParticleRecord r;
         std::string particle;
 
-        std::stringstream ss(line);
+        std::stringstream ss(line);  // units in file are mm keV and ns
         ss >> particle >> r.Energy >> r.Time
            >> r.Position[0]  >> r.Position[1] >>  r.Position[2]
            >> r.Direction[0] >> r.Direction[1] >> r.Direction[2];

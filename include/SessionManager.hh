@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "G4ThreeVector.hh"
 
@@ -52,6 +53,7 @@ public:
         void prepareOutputStream();
         void terminateSession(const std::string & ErrorMessage);
         bool isEndOfInputFileReached() const;
+        bool extractIonInfo(const std::string &text, int &Z, int &A, double &E);
 
         std::vector<ParticleRecord> & getNextEventPrimaries();
 
@@ -60,6 +62,7 @@ private:
         std::ofstream * outStream = nullptr;
         std::vector<ParticleRecord> GeneratedPrimaries;
         std::string EventId = "#0";
+        std::map<std::string, int> ElementToZ;
 };
 
 #endif // SESSIONMANAGER_H

@@ -7,8 +7,8 @@
 #include "G4ParticleDefinition.hh"
 #include "G4UImanager.hh"
 #include "G4ParticleTable.hh"
-
-//#include <QDebug>
+#include "G4IonTable.hh"
+#include "G4SystemOfUnits.hh"
 
 SessionManager &SessionManager::getInstance()
 {
@@ -16,7 +16,13 @@ SessionManager &SessionManager::getInstance()
     return instance;
 }
 
-SessionManager::SessionManager(){}
+SessionManager::SessionManager()
+{
+    std::vector<std::string> allElements = {"H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr","Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl","Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs"};
+
+    for (size_t i = 0; i < allElements.size(); i++)
+        ElementToZ.emplace( std::make_pair(allElements[i], i+1) );
+}
 
 SessionManager::~SessionManager()
 {
@@ -25,6 +31,20 @@ SessionManager::~SessionManager()
 
 void SessionManager::startSession()
 {
+     /*
+    // TEST : ion generation from name
+    G4ParticleDefinition * pd = G4IonTable::GetIonTable()->GetIon(74, 150, 12.52*keV);  // 0*keV
+    std::string name = pd->GetParticleName(); //or set directly = "Be9[123.4]";
+    std::cout << "Original particle name: " << name << std::endl;
+    int Z, A;
+    double E;
+    bool ok = extractIonInfo(name, Z, A, E);
+    std::cout << "Extracted data:  Success=" << ok << "  Z=" << Z << "  A=" << A << "  E=" << E << std::endl;
+    G4ParticleDefinition * newpd = G4IonTable::GetIonTable()->GetIon(Z, A, E*keV);
+    std::cout << "Generated particle name: " << newpd->GetParticleName() << std::endl;
+    return;
+     */
+
     prepareInputStream();
     prepareOutputStream();
 }
@@ -36,6 +56,65 @@ void SessionManager::endSession()
 
     if (outStream) outStream->close();
     delete outStream; outStream = nullptr;
+}
+
+bool SessionManager::extractIonInfo(const std::string & text, int & Z, int & A, double & E)
+{
+    size_t size = text.length();
+    if (size < 2) return false;
+
+    // -- extracting Z --
+    const char & c0 = text[0];
+    if (c0 < 'A' || c0 > 'Z') return false;
+    std::string symbol;
+    symbol += c0;
+
+    size_t index = 1;
+    const char & c1 = text[1];
+    if (c1 >= 'a' && c1 <= 'z')
+    {
+        symbol += c1;
+        index++;
+    }
+    try
+    {
+        Z = ElementToZ.at(symbol);
+    }
+    catch (...)
+    {
+        return false;
+    }
+
+    // -- extracting A --
+    A = 0; E = 0;
+    char ci;
+    while (index < size)
+    {
+        ci = text[index];
+        if (ci < '0' || ci > '9') break;
+        A = A*10 + (int)ci - (int)'0';
+        index++;
+    }
+    if (A == 0) return false;
+
+    if (index == size) return true;
+
+    // -- extracting excitation energy --
+    if (ci != '[') return false;
+    index++;
+    std::stringstream energy;
+    while (index < size)
+    {
+        ci = text[index];
+        if (ci == ']')
+        {
+            energy >> E;
+            return !energy.fail();
+        }
+        energy << ci;
+        index++;
+    }
+    return false;
 }
 
 void SessionManager::runSimulation()
@@ -117,7 +196,22 @@ std::vector<ParticleRecord> & SessionManager::getNextEventPrimaries()
             terminateSession("Unexpected format of a line in the file with the input particles");
 
         r.Particle = G4ParticleTable::GetParticleTable()->FindParticle(particle);
-        if (!r.Particle) terminateSession("Found an unknown particle: " + particle); // *** todo: ions!!!
+        if (!r.Particle)
+        {
+            // is it an ion?
+            int Z, A;
+            double E;
+            bool ok = extractIonInfo(particle, Z, A, E);
+            if (!ok)
+                terminateSession("Found an unknown particle: " + particle);
+
+            r.Particle = G4ParticleTable::GetParticleTable()->GetIonTable()->GetIon(Z, A, E*keV);
+
+            std::cout << particle << "   ->   " << r.Particle->GetParticleName() << std::endl; // *** temporary !!!
+
+            if (!r.Particle)
+                terminateSession("Failed to generate ion: " + particle);
+        }
 
         GeneratedPrimaries.push_back(r);
     }

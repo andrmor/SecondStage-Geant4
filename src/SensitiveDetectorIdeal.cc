@@ -28,11 +28,17 @@ G4bool SensitiveDetectorIdeal::ProcessHits(G4Step* aStep, G4TouchableHistory*)
              << "Time: " << preStep->GetGlobalTime();
     */
 
+
+    const double time = preStep->GetGlobalTime()/ns;
+    if (time > SM.TimeLimit) return true;
+
     std::stringstream text;
+    text.precision(SM.OutputPrecision);
+
     text << preStep->GetPhysicalVolume()->GetCopyNo() << ' '
          << aStep->GetTrack()->GetParticleDefinition()->GetParticleName() << ' '
          << preStep->GetKineticEnergy()/keV << ' '
-         << preStep->GetGlobalTime()/ns;
+         << time;
 
     SM.sendLineToOutput(text); // format: Index Particle Energy[keV] Time[ns]
 

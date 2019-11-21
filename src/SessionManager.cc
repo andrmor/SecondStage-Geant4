@@ -123,11 +123,12 @@ void SessionManager::runSimulation()
     G4UImanager* UImanager = G4UImanager::GetUIpointer();
     while (!isEndOfInputFileReached())
     {
-        if (iCounter % 100 == 0)
+        if (iCounter % 1000 == 0)
             std::cout << EventId << std::endl;
 
         saveEventId();
         UImanager->ApplyCommand("/run/beamOn");
+        iCounter++;
     }
 }
 

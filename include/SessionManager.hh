@@ -46,6 +46,9 @@ class SessionManager
         std::string FileName_Input;
         std::string FileName_Output;
 
+        double TimeLimit    = 3.13e6;
+        int OutputPrecision = 8;
+
 public:
         void sendLineToOutput(const std::stringstream & text) const;
         void saveEventId() const;

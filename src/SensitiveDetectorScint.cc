@@ -19,6 +19,10 @@ G4bool SensitiveDetectorScint::ProcessHits(G4Step* aStep, G4TouchableHistory*)
 
     SessionManager & SM = SessionManager::getInstance();
     const G4StepPoint * postStep = aStep->GetPostStepPoint();
+
+    const double time = postStep->GetGlobalTime()/ns;
+    if (time > SM.TimeLimit) return true;
+
     const G4ThreeVector & pos = postStep->GetPosition();
 
     /*
@@ -30,10 +34,12 @@ G4bool SensitiveDetectorScint::ProcessHits(G4Step* aStep, G4TouchableHistory*)
     */
 
     std::stringstream text;  // output format: Index Particle EnergyDeposition[keV] Time[ns] X[mm] Y[mm] Z[mm]
+    text.precision(SM.OutputPrecision);
+
     text << postStep->GetPhysicalVolume()->GetCopyNo() << ' '
          << aStep->GetTrack()->GetParticleDefinition()->GetParticleName() << ' '
          << edep << ' '
-         << postStep->GetGlobalTime()/ns << ' '
+         << time << ' '
          << pos[0] << ' ' << pos[1] << ' ' << pos[2];
 
     SM.sendLineToOutput(text);

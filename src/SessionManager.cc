@@ -208,7 +208,7 @@ std::vector<ParticleRecord> & SessionManager::getNextEventPrimaries()
 
             r.Particle = G4ParticleTable::GetParticleTable()->GetIonTable()->GetIon(Z, A, E*keV);
 
-            std::cout << particle << "   ->   " << r.Particle->GetParticleName() << std::endl; // *** temporary !!!
+            //std::cout << particle << "   ->   " << r.Particle->GetParticleName() << std::endl;
 
             if (!r.Particle)
                 terminateSession("Failed to generate ion: " + particle);

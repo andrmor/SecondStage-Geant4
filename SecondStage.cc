@@ -19,8 +19,8 @@ int main(int argc, char** argv)
 
     long Seed = 111111;
 
-    SM.FileName_Input  = "/home/andr/tmp/2stages/Target-1e8-0-111111-c2.txt";
-    SM.FileName_Output = "/home/andr/tmp/2stages/SecStage_Ideal_111111_of_Target-1e8-0-111111-c2.txt";
+    SM.FileName_Input  = "/home/andr/tmp/2stages/Target-1e8-0-111111-c4.txt";
+    SM.FileName_Output = "/home/andr/tmp/2stages/SecStage_Ideal_111111_of_Target-1e8-0-111111-c4.txt";
 
     SM.TimeLimit = 3.13e6; // ignore all particles appearing 0.00313+ ms after the start of irradiation
     SM.OutputPrecision = 8;

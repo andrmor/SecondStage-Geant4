@@ -126,7 +126,7 @@ void SessionManager::runSimulation()
         if (iCounter % 1000 == 0)
             std::cout << EventIdString << std::endl;
 
-        saveEventId();
+        saveEventNumber();
         UImanager->ApplyCommand("/run/beamOn");
         iCounter++;
     }
@@ -138,14 +138,69 @@ bool SessionManager::isEndOfInputFileReached() const
     return inStream->eof();
 }
 
-void SessionManager::sendLineToOutput(const std::stringstream & text) const
+void SessionManager::saveRecord_Ideal(const std::string & particleName, int scintNumber, double energy, double time)
 {
-    *outStream << text.rdbuf() << std::endl;
+    if (bBinaryOutput)
+    {
+        *outStream << char(0xff);
+        outStream->write((char*)&scintNumber, sizeof(int));
+        outStream->write((char*)&energy, sizeof(double));
+        outStream->write((char*)&time, sizeof(double));
+        *outStream << particleName << char(0x00);
+    }
+    else
+    {
+        std::stringstream text;
+        text.precision(OutputPrecision);
+
+        text << scintNumber << ' '
+             << particleName << ' '
+             << energy << ' '
+             << time;
+
+        *outStream << text.rdbuf() << std::endl;
+    }
 }
 
-void SessionManager::saveEventId() const
+void SessionManager::saveRecord_Scint(const std::string & particleName, int scintNumber, double depoEnergy, double time, double * pos)
 {
-     *outStream << '#' << NextEventId << std::endl;
+    if (bBinaryOutput)
+    {
+        *outStream << char(0xff);
+
+        outStream->write((char*)&scintNumber, sizeof(int));
+        outStream->write((char*)&depoEnergy,  sizeof(double));
+        outStream->write((char*)&time,        sizeof(double));
+        outStream->write((char*)pos,        3*sizeof(double));
+
+        *outStream << particleName << char(0x00);
+    }
+    else
+    {
+        std::stringstream text;
+        text.precision(OutputPrecision);
+
+        text << scintNumber << ' '
+             << particleName << ' '
+             << depoEnergy << ' '
+             << time << ' '
+             << pos[0] << ' ' << pos[1] << ' ' << pos[2];
+
+        *outStream << text.rdbuf() << std::endl;
+    }
+}
+
+void SessionManager::saveEventNumber() const
+{
+    if (bBinaryOutput)
+    {
+        *outStream << char(0xee);
+        outStream->write((char*)&NextEventId, sizeof(int));
+    }
+    else
+    {
+        *outStream << '#' << NextEventId << std::endl;
+    }
 }
 
 void SessionManager::prepareInputStream()
@@ -187,7 +242,10 @@ void SessionManager::prepareInputStream()
 void SessionManager::prepareOutputStream()
 {
     outStream = new std::ofstream();
-    outStream->open(FileName_Output);
+
+    if (bBinaryOutput) outStream->open(FileName_Output, std::ios::out | std::ios::binary);
+    else               outStream->open(FileName_Output);
+
     if (!outStream->is_open())
         terminateSession("Cannot open output file: " + FileName_Output);
 }

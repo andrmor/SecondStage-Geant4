@@ -7,8 +7,6 @@
 #include "G4ThreeVector.hh"
 #include "G4SystemOfUnits.hh"
 
-//#include <QDebug>
-
 SensitiveDetectorScint::SensitiveDetectorScint(const G4String & name)
     : G4VSensitiveDetector(name) {}
 
@@ -26,23 +24,24 @@ G4bool SensitiveDetectorScint::ProcessHits(G4Step* aStep, G4TouchableHistory*)
     const G4ThreeVector & pos = postStep->GetPosition();
 
     /*
-    qDebug() << "Particle: " << aStep->GetTrack()->GetParticleDefinition()->GetParticleName()
-             << "volume: " << postStep->GetPhysicalVolume()->GetName()
-             << "index: " << postStep->GetPhysicalVolume()->GetCopyNo()
-             << "Energy: " << postStep->GetKineticEnergy()/keV
-             << "Time: " << postStep->GetGlobalTime();
+    std::cout << "Particle: " << aStep->GetTrack()->GetParticleDefinition()->GetParticleName()
+              << "volume: " << postStep->GetPhysicalVolume()->GetName()
+              << "index: " << postStep->GetPhysicalVolume()->GetCopyNo()
+              << "Energy: " << postStep->GetKineticEnergy()/keV
+              << "Time: " << postStep->GetGlobalTime()
+              << "XYZ:" << pos[0] << ' ' << pos[1] << ' ' << pos[2] << std::endl;
     */
 
-    std::stringstream text;  // output format: Index Particle EnergyDeposition[keV] Time[ns] X[mm] Y[mm] Z[mm]
-    text.precision(SM.OutputPrecision);
+    double posArr[3];
+    posArr[0] = pos[0]/mm;
+    posArr[1] = pos[1]/mm;
+    posArr[2] = pos[2]/mm;
 
-    text << postStep->GetPhysicalVolume()->GetCopyNo() << ' '
-         << aStep->GetTrack()->GetParticleDefinition()->GetParticleName() << ' '
-         << edep << ' '
-         << time << ' '
-         << pos[0] << ' ' << pos[1] << ' ' << pos[2];
-
-    SM.sendLineToOutput(text);
+    SM.saveRecord_Scint(aStep->GetTrack()->GetParticleDefinition()->GetParticleName(),
+                        postStep->GetPhysicalVolume()->GetCopyNo(),
+                        edep,
+                        time,
+                        posArr);
 
     return true;
 }

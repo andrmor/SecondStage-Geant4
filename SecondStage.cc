@@ -9,32 +9,68 @@
 #include "G4VisExecutive.hh"
 #include "G4UIExecutive.hh"
 
+// ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+//
+// File formats
+//   Input
+//     for ascii files
+//       new event line: #EventNumber
+//       new record:     ParticleName Energy[keV] Time[ns] X[mm] Y[mm] Z[mm] DirX DirY DirZ
+//     for binary files
+//       new event line: 0xEE(char) EventNumber(int)
+//       new record:     0xFF(char) Energy(double)[keV] Time(double)[ns] X(double)[mm] Y(double)[mm] Z(double)[mm] DirX(double)[mm] DirY(double)[mm] DirZ(double)[mm] ParticleName(string) 0x00(char)
+//
+//   Output for ascii mode
+//     in config with ideal detectors:
+//       new event line: #EventNumber
+//       new record:     IdelDetIndex ParticleName Energy[keV] Time[ns]
+//     in config with scintillators:
+//       new event line: #EventNumber
+//       new record:     ScintIndex ParticleName EnergyDeposition[keV] Time[ns] X[mm] Y[mm] Z[mm]
+//   Output for binary mode
+//     in config with ideal detectors:
+//          new event line: 0xEE(char) EventNumber(int)
+//          new record:     0xFF(char) ScintNumber(int) ParticleEnergy(double)[keV] Time(double)[ns] ParticleName(string) 0x00(char)
+//     in config with scintillators:
+//          new event line: 0xEE(char) EventNumber(int)
+//          new record:     0xFF(char) ScintNumber(int) ParticleEnergy(double)[keV] Time(double)[ns] X(double)[mm] Y(double)[mm] Z(double)[mm] ParticleName(string) 0x00(char)
+//
+// ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 int main(int argc, char** argv)
 {
     SessionManager& SM = SessionManager::getInstance();
 
+    // --- user inits ---
+
     SM.bGuiMode = false;
-    //SM.DetectorType = SessionManager::IdealDetectors;  // output format: Index Particle Energy[keV] Time[ns]
-    SM.DetectorType = SessionManager::Scintillators;    // output format: Index Particle EnergyDeposition[keV] Time[ns] X[mm] Y[mm] Z[mm]
 
-    long Seed = 111111;
+    SM.DetectorType = SessionManager::IdealDetectors;
+    //SM.DetectorType = SessionManager::Scintillators;
 
-    std::string WorkingDirectory  = "/home/andr/tmp/2stages";
+    long Seed               = 111111;
 
-    SM.bBinaryInput = true;
-    std::string InputFile = "test_seed111111_shift0_runs10.bin";
+    SM.TimeLimit            = 3.13e6; // ignore all particles appearing 0.00313+ ms after the start of irradiation
 
+    std::string WorkingDir  = "/home/andr/tmp/2stages";
 
-    SM.FileName_Input  = WorkingDirectory + "/" + InputFile;
-    std::string tmp = InputFile;
-    tmp.resize(SM.FileName_Input.size()-4);
-    SM.FileName_Output = WorkingDirectory + "/SecStage_" + (SM.DetectorType == SessionManager::Scintillators ? "Scint" : "Ideal") + "_" + tmp + ".txt";
+    SM.bBinaryInput         = true;
+    std::string InputFile   = "test_seed111111_shift0_runs1000.bin";
 
-    SM.TimeLimit = 3.13e6; // ignore all particles appearing 0.00313+ ms after the start of irradiation
-    SM.OutputPrecision = 8;
+    SM.bBinaryOutput        = true;
 
+    SM.OutputPrecision      = 8; // only affects ascii output
 
+    // --- end of user inits ---
 
+    SM.FileName_Input  = WorkingDir + "/" + InputFile;
+
+    //std::string tmp = InputFile;
+    //tmp.resize(InputFile.size()-4);
+    SM.FileName_Output = WorkingDir + "/" + (SM.DetectorType == SessionManager::Scintillators ? "DepoScint__" : "Ideal__") + InputFile+ "__";
+    SM.FileName_Output += (SM.bBinaryOutput ? ".bin" : ".txt");
+
+    std::cout << "Output file name: " << SM.FileName_Output << std::endl;
 
     CLHEP::RanecuEngine* randGen = new CLHEP::RanecuEngine();
     randGen->setSeed(Seed);
@@ -95,4 +131,6 @@ int main(int argc, char** argv)
     delete ui;
 
     SM.endSession();
+
+    std::cout << "Output file name:" << std::endl << SM.FileName_Output << std::endl;
 }

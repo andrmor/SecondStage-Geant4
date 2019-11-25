@@ -18,8 +18,6 @@
 #include "G4Colour.hh"
 #include "G4SDManager.hh"
 
-#include <QDebug>
-
 G4VPhysicalVolume* DetectorConstruction::Construct()
 {
     G4NistManager * man = G4NistManager::Instance();
@@ -66,10 +64,10 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
     G4int    numEl     = colSizeX / pitch;
     //numEl = 1;
-    qDebug() << "Number of scintillators:" << numEl*2;
+    std::cout << "Number of scintillators: " << numEl*2 << std::endl;
     G4int HalfNumWalls = ceil(0.5*colSizeY / sciSizeZ);
     G4double slabSize = 0.5*colSizeY / HalfNumWalls;
-    qDebug() << "Number or scintillator slabs per plane: " << HalfNumWalls*2 << "      Slab size: " << slabSize;
+    std::cout << "Number or scintillator slabs per plane: " << HalfNumWalls*2 << "      Slab size: " << slabSize << std::endl;
 
     G4double IdealDetectorHeight = 0.1*mm;
 

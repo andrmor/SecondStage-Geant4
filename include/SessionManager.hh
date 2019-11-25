@@ -46,6 +46,7 @@ class SessionManager
         bool bBinaryInput           = false;
         std::string FileName_Input;
 
+        bool bBinaryOutput          = false;
         std::string FileName_Output;
 
         double TimeLimit            = 3.13e6;
@@ -54,11 +55,12 @@ class SessionManager
         int NextEventId = 0;
 
 public:
-        void sendLineToOutput(const std::stringstream & text) const;
-        void saveEventId() const;
+        void terminateSession(const std::string & ErrorMessage);
         void prepareInputStream();
         void prepareOutputStream();
-        void terminateSession(const std::string & ErrorMessage);
+        void saveRecord_Ideal(const std::string & particleName, int scintNumber, double energy, double time);
+        void saveRecord_Scint(const std::string & particleName, int scintNumber, double depoEnergy, double time, double * pos);
+        void saveEventNumber() const;
         bool isEndOfInputFileReached() const;
         bool extractIonInfo(const std::string &text, int &Z, int &A, double &E);
 

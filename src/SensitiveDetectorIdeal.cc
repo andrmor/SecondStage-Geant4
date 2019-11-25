@@ -7,8 +7,6 @@
 #include "G4ThreeVector.hh"
 #include "G4SystemOfUnits.hh"
 
-#include <QDebug>
-
 SensitiveDetectorIdeal::SensitiveDetectorIdeal(const G4String & name)
     : G4VSensitiveDetector(name) {}
 
@@ -16,31 +14,25 @@ G4bool SensitiveDetectorIdeal::ProcessHits(G4Step* aStep, G4TouchableHistory*)
 {  
     SessionManager & SM = SessionManager::getInstance();
 
-    // this will trigger on exit from this volume
+    // this will be triggered on exit from the sensitive detector
 
     const G4StepPoint * preStep = aStep->GetPreStepPoint();
 
     /*
-    qDebug() << "Particle: " << aStep->GetTrack()->GetParticleDefinition()->GetParticleName()
-             << "volume: " << preStep->GetPhysicalVolume()->GetName()
-             << "index: " << preStep->GetPhysicalVolume()->GetCopyNo()
-             << "Energy: " << preStep->GetKineticEnergy()/keV
-             << "Time: " << preStep->GetGlobalTime();
+    std::cout << "Particle: " << aStep->GetTrack()->GetParticleDefinition()->GetParticleName()
+              << "volume: " << preStep->GetPhysicalVolume()->GetName()
+              << "index: " << preStep->GetPhysicalVolume()->GetCopyNo()
+              << "Energy: " << preStep->GetKineticEnergy()/keV
+              << "Time: " << preStep->GetGlobalTime() << std::endl;
     */
-
 
     const double time = preStep->GetGlobalTime()/ns;
     if (time > SM.TimeLimit) return true;
 
-    std::stringstream text;
-    text.precision(SM.OutputPrecision);
-
-    text << preStep->GetPhysicalVolume()->GetCopyNo() << ' '
-         << aStep->GetTrack()->GetParticleDefinition()->GetParticleName() << ' '
-         << preStep->GetKineticEnergy()/keV << ' '
-         << time;
-
-    SM.sendLineToOutput(text); // format: Index Particle Energy[keV] Time[ns]
+    SM.saveRecord_Ideal(aStep->GetTrack()->GetParticleDefinition()->GetParticleName(),
+                        preStep->GetPhysicalVolume()->GetCopyNo(),
+                        preStep->GetKineticEnergy()/keV,
+                        time);
 
     aStep->GetTrack()->SetTrackStatus(fStopAndKill);
     return true;

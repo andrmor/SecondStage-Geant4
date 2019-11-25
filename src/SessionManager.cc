@@ -124,7 +124,7 @@ void SessionManager::runSimulation()
     while (!isEndOfInputFileReached())
     {
         if (iCounter % 1000 == 0)
-            std::cout << EventId << std::endl;
+            std::cout << EventIdString << std::endl;
 
         saveEventId();
         UImanager->ApplyCommand("/run/beamOn");
@@ -145,20 +145,43 @@ void SessionManager::sendLineToOutput(const std::stringstream & text) const
 
 void SessionManager::saveEventId() const
 {
-     *outStream << EventId.data() << std::endl;
+     *outStream << '#' << NextEventId << std::endl;
 }
 
 void SessionManager::prepareInputStream()
 {
-    inStream = new std::ifstream(FileName_Input);
+    if (bBinaryInput) inStream = new std::ifstream(FileName_Input, std::ios::in | std::ios::binary);
+    else              inStream = new std::ifstream(FileName_Input);
+
     if (!inStream->is_open())
         terminateSession("Cannot open input file: " + FileName_Input);
 
-    getline( *inStream, EventId );
-    if (EventId.size() < 2 || EventId[0] != '#')
-        terminateSession("Unexpected format of the input file (Event tag not found)");
-
-    std::cout << EventId << std::endl;
+    //first line should start with the event tag and contain the event number
+    if (bBinaryInput)
+    {
+        char header = 0;
+        *inStream >> header;
+        if (header != char(0xee))
+            terminateSession("Unexpected format of the input file (Event tag not found)");
+        inStream->read((char*)&NextEventId, sizeof(int));
+        if (inStream->fail())
+            terminateSession("Unexpected format of the input file (Event tag not found)");
+    }
+    else
+    {
+        std::getline( *inStream, EventIdString );
+        if (EventIdString.size() < 2 || EventIdString[0] != '#')
+            terminateSession("Unexpected format of the input file (Event tag not found)");
+        try
+        {
+            NextEventId = std::stoi(EventIdString.substr(1, EventIdString.size()-1));
+        }
+        catch (...)
+        {
+            terminateSession("Unexpected format of the input file (Event tag not found)");
+        }
+    }
+    std::cout << '#' << NextEventId << std::endl;
 }
 
 void SessionManager::prepareOutputStream()
@@ -173,14 +196,29 @@ std::vector<ParticleRecord> & SessionManager::getNextEventPrimaries()
 {
     GeneratedPrimaries.clear();
 
-    for( std::string line; getline( *inStream, line ); )
+    if (bBinaryInput)  readEventFromBinaryInput();
+    else               readEventFromTextInput();
+
+    return GeneratedPrimaries;
+}
+
+void SessionManager::readEventFromTextInput()
+{
+    for( std::string line; std::getline( *inStream, line ); )
     {
         //std::cout << line << std::endl;
         if (line.size() < 1) continue; //allow empty lines
 
         if (line[0] == '#')
         {
-            EventId = line;
+            try
+            {
+                NextEventId = std::stoi( line.substr(1, line.size()-1) );
+            }
+            catch (...)
+            {
+                terminateSession("Unexpected format of the input file: event number format error");
+            }
             break; //event finished
         }
 
@@ -191,33 +229,83 @@ std::vector<ParticleRecord> & SessionManager::getNextEventPrimaries()
         ss >> particle >> r.Energy >> r.Time
            >> r.Position[0]  >> r.Position[1] >>  r.Position[2]
            >> r.Direction[0] >> r.Direction[1] >> r.Direction[2];
-        //qDebug() << particle.data() << r.Energy << r.Time << r.Position[0]  << r.Position[1] <<  r.Position[2] << r.Direction[0] << r.Direction[1] << r.Direction[2];
 
         if (ss.fail())
             terminateSession("Unexpected format of a line in the file with the input particles");
 
-        r.Particle = G4ParticleTable::GetParticleTable()->FindParticle(particle);
-        if (!r.Particle)
-        {
-            // is it an ion?
-            int Z, A;
-            double E;
-            bool ok = extractIonInfo(particle, Z, A, E);
-            if (!ok)
-                terminateSession("Found an unknown particle: " + particle);
-
-            r.Particle = G4ParticleTable::GetParticleTable()->GetIonTable()->GetIon(Z, A, E*keV);
-
-            //std::cout << particle << "   ->   " << r.Particle->GetParticleName() << std::endl;
-
-            if (!r.Particle)
-                terminateSession("Failed to generate ion: " + particle);
-        }
-
+        r.Particle = makeGeant4Particle(particle);
+        //std::cout << str << ' ' << r.Energy << ' ' << r.Time << ' ' << r.Position[0] << ' ' << r.Position[1] << ' ' << r.Position[2] << ' ' << r.Direction[0] << ' ' << r.Direction[1] << ' ' << r.Direction[2] << std::endl;
         GeneratedPrimaries.push_back(r);
     }
+}
 
-    return GeneratedPrimaries;
+void SessionManager::readEventFromBinaryInput()
+{
+    char header = 0;
+
+    while (*inStream >> header)
+    {
+        if (header == char(0xee))
+        {
+            inStream->read((char*)&NextEventId, sizeof(int));
+            //std::cout << '#' << NextEventId << std::endl;
+            break; //event finished
+        }
+        else if (header == char(0xff))
+        {
+            ParticleRecord r;
+            inStream->read((char*)&r.Energy,       sizeof(double));
+            inStream->read((char*)&r.Time,         sizeof(double));
+            inStream->read((char*)&r.Position[0],  sizeof(double));
+            inStream->read((char*)&r.Position[1],  sizeof(double));
+            inStream->read((char*)&r.Position[2],  sizeof(double));
+            inStream->read((char*)&r.Direction[0], sizeof(double));
+            inStream->read((char*)&r.Direction[1], sizeof(double));
+            inStream->read((char*)&r.Direction[2], sizeof(double));
+            char ch;
+            std::string str;
+            while (*inStream >> ch)
+            {
+                if (ch == 0x00) break;
+                str += ch;
+            }
+            if (inStream->fail())
+                terminateSession("Unexpected format of a line in the binary file with the input particles");
+
+            r.Particle = makeGeant4Particle(str);
+            //std::cout << str << ' ' << r.Energy << ' ' << r.Time << ' ' << r.Position[0] << ' ' << r.Position[1] << ' ' << r.Position[2] << ' ' << r.Direction[0] << ' ' << r.Direction[1] << ' ' << r.Direction[2] << std::endl;
+            GeneratedPrimaries.push_back(r);
+        }
+        else
+        {
+            terminateSession("Unexpected format of binary input");
+            break;
+        }
+    }
+}
+
+G4ParticleDefinition * SessionManager::makeGeant4Particle(const std::string & particleName)
+{
+    G4ParticleDefinition * Particle = G4ParticleTable::GetParticleTable()->FindParticle(particleName);
+
+    if (!Particle)
+    {
+        // is it an ion?
+        int Z, A;
+        double E;
+        bool ok = extractIonInfo(particleName, Z, A, E);
+        if (!ok)
+            terminateSession("Found an unknown particle: " + particleName);
+
+        Particle = G4ParticleTable::GetParticleTable()->GetIonTable()->GetIon(Z, A, E*keV);
+
+        if (!Particle)
+            terminateSession("Failed to generate ion: " + particleName);
+
+        //std::cout << particleName << "   ->   " << Particle->GetParticleName() << std::endl;
+    }
+
+    return Particle;
 }
 
 void SessionManager::terminateSession(const std::string & ErrorMessage)

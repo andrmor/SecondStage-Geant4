@@ -14,16 +14,27 @@ int main(int argc, char** argv)
     SessionManager& SM = SessionManager::getInstance();
 
     SM.bGuiMode = false;
-    SM.DetectorType = SessionManager::IdealDetectors;  // output format: Index Particle Energy[keV] Time[ns]
-    //SM.DetectorType = SessionManager::Scintillators;    // output format: Index Particle EnergyDeposition[keV] Time[ns] X[mm] Y[mm] Z[mm]
+    //SM.DetectorType = SessionManager::IdealDetectors;  // output format: Index Particle Energy[keV] Time[ns]
+    SM.DetectorType = SessionManager::Scintillators;    // output format: Index Particle EnergyDeposition[keV] Time[ns] X[mm] Y[mm] Z[mm]
 
     long Seed = 111111;
 
-    SM.FileName_Input  = "/home/andr/tmp/2stages/Target-1e8-0-111111-c4.txt";
-    SM.FileName_Output = "/home/andr/tmp/2stages/SecStage_Ideal_111111_of_Target-1e8-0-111111-c4.txt";
+    std::string WorkingDirectory  = "/home/andr/tmp/2stages";
+
+    SM.bBinaryInput = true;
+    std::string InputFile = "test_seed111111_shift0_runs10.bin";
+
+
+    SM.FileName_Input  = WorkingDirectory + "/" + InputFile;
+    std::string tmp = InputFile;
+    tmp.resize(SM.FileName_Input.size()-4);
+    SM.FileName_Output = WorkingDirectory + "/SecStage_" + (SM.DetectorType == SessionManager::Scintillators ? "Scint" : "Ideal") + "_" + tmp + ".txt";
 
     SM.TimeLimit = 3.13e6; // ignore all particles appearing 0.00313+ ms after the start of irradiation
     SM.OutputPrecision = 8;
+
+
+
 
     CLHEP::RanecuEngine* randGen = new CLHEP::RanecuEngine();
     randGen->setSeed(Seed);

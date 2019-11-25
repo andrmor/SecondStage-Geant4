@@ -38,16 +38,20 @@ class SessionManager
 
         void runSimulation();
 
-        bool bGuiMode           = false;
+        bool bGuiMode               = false;
 
         enum SimMode {IdealDetectors = 0, Scintillators = 1};
         SimMode DetectorType;
 
+        bool bBinaryInput           = false;
         std::string FileName_Input;
+
         std::string FileName_Output;
 
-        double TimeLimit    = 3.13e6;
-        int OutputPrecision = 8;
+        double TimeLimit            = 3.13e6;
+        int OutputPrecision         = 8;
+
+        int NextEventId = 0;
 
 public:
         void sendLineToOutput(const std::stringstream & text) const;
@@ -64,8 +68,13 @@ private:
         std::ifstream * inStream = nullptr;
         std::ofstream * outStream = nullptr;
         std::vector<ParticleRecord> GeneratedPrimaries;
-        std::string EventId = "#0";
+        std::string EventIdString = "#0";
         std::map<std::string, int> ElementToZ;
+
+private:
+        void readEventFromTextInput();
+        void readEventFromBinaryInput();
+        G4ParticleDefinition * makeGeant4Particle(const std::string & particleName);
 };
 
 #endif // SESSIONMANAGER_H

@@ -119,16 +119,14 @@ bool SessionManager::extractIonInfo(const std::string & text, int & Z, int & A, 
 
 void SessionManager::runSimulation()
 {
-    int iCounter = 0;
     G4UImanager* UImanager = G4UImanager::GetUIpointer();
     while (!isEndOfInputFileReached())
     {
-        if (iCounter % 1000 == 0)
-            std::cout << EventIdString << std::endl;
+        if (NextEventId % 1000 == 0)
+            std::cout << NextEventId << std::endl;
 
         saveEventNumber();
         UImanager->ApplyCommand("/run/beamOn");
-        iCounter++;
     }
 }
 

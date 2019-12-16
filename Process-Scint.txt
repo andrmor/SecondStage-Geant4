@@ -1,0 +1,122 @@
+
+var data = core.loadArrayExtended("/home/andr/tmp/2stages/SecStage_Scint_111111_of_Target-1e8-0-111111-c4.txt",  ['i', 's', 'd', 'd'])
+var size = data.length
+
+ var  scintPos = []
+ calculateScintPositions()
+
+var ArrTimeEnergy = []
+
+var ArrScintEnergyIn = []
+var ArrScintEnergyOut = []
+
+//var Arr2DScintEnergyIn = []
+//var Arr2DScintEnergyOut = []
+
+for (var i=0; i<size; i++)
+{
+       if (data[i][1] !== "gamma")  continue
+       
+       var idet = data[i][0]
+       var energy = data[i][2]
+       var localTime = data[i][3] % 10
+       
+       ArrTimeEnergy.push([localTime, energy])
+       
+       if (localTime > 1 && localTime < 3 )
+       {
+              ArrScintEnergyIn.push([idet, energy])
+              //Arr2DScintEnergyIn.push([idet, energy, 1])
+       }
+       else
+       {
+              ArrScintEnergyOut.push([idet, energy])
+              //Arr2DScintEnergyOut.push([idet, energy, 1])
+       }       
+}
+
+grwin.ClearBasket()
+
+hist.NewHist("TimeSpectrumEnergy", 100,0,10)
+hist.SetTitles("TimeSpectrumEnergy", "Time, ns", "Overall energy, keV")
+hist.FillArr("TimeSpectrumEnergy", ArrTimeEnergy)
+hist.Draw("TimeSpectrumEnergy", "hist")
+grwin.AddToBasket("TimeSpectrumEnergy")
+
+hist.NewHist("hSensorEnergyIn", 52,0,52)
+hist.SetTitles("hSensorEnergyIn", "Sensor #", "Sum energy, keV")
+hist.FillArr("hSensorEnergyIn", ArrScintEnergyIn)
+hist.SetMinimum("hSensorEnergyIn", 0)
+hist.Draw("hSensorEnergyIn", "hist")
+grwin.AddToBasket("SensorEnergyIn-raw")
+hist.ApplyMedianFilter("hSensorEnergyIn", 2,3)
+var arrSEI = hist.GetContent("hSensorEnergyIn")
+graph.NewGraph("SensorEnergyIn")
+indexToPos(arrSEI)
+graph.AddPoints("SensorEnergyIn", arrSEI)
+graph.SetTitles("SensorEnergyIn", "Sensor #", "Sum energy, keV")
+graph.SetXRange("SensorEnergyIn", 0, 195)
+graph.SetMinimum("SensorEnergyIn", 0)
+graph.Draw("SensorEnergyIn")
+grwin.AddToBasket("SensorEnergyIn")
+
+hist.NewHist("hSensorEnergyAll", 52,0,52)
+hist.SetTitles("hSensorEnergyAll", "Sensor #", "Sum energy, keV")
+hist.FillArr("hSensorEnergyAll", ArrScintEnergyIn)
+hist.FillArr("hSensorEnergyAll", ArrScintEnergyOut)
+hist.SetMinimum("hSensorEnergyAll", 0)
+hist.Draw("hSensorEnergyAll-raw", "hist")
+grwin.AddToBasket("SensorEnergyAll")
+hist.ApplyMedianFilter("hSensorEnergyAll", 2,3)
+var arrSEA = hist.GetContent("hSensorEnergyAll")
+graph.NewGraph("SensorEnergyAll")
+indexToPos(arrSEA)
+graph.AddPoints("SensorEnergyAll", arrSEA)
+graph.SetTitles("SensorEnergyAll", "Sensor #", "Sum energy, keV")
+graph.SetXRange("SensorEnergyAll", 0, 195)
+graph.SetMinimum("SensorEnergyAll", 0)
+graph.Draw("SensorEnergyAll")
+grwin.AddToBasket("SensorEnergyAll")
+
+/*
+hist.NewHist2D("2DSensorEnergyIn", 52,0,52, 50, 0, 100)
+hist.SetTitles("2DSensorEnergyIn", "Sensor #", "Energy, keV")
+hist.Fill2DArr("2DSensorEnergyIn", Arr2DScintEnergyIn)
+hist.SetMinimum("2DSensorEnergyIn", -0.01)
+hist.Draw("2DSensorEnergyIn", "colz")
+grwin.AddToBasket("2DSensorEnergyIn")
+
+hist.NewHist2D("2DSensorEnergyOut", 52,0,52, 50, 0, 100)
+hist.SetTitles("2DSensorEnergyOut", "Sensor #", "Energy, keV")
+hist.Fill2DArr("2DSensorEnergyOut", Arr2DScintEnergyOut)
+hist.SetMinimum("2DSensorEnergyOut", -0.01)
+hist.Draw("2DSensorEnergyOut", "colz")
+grwin.AddToBasket("2DSensorEnergyOut")
+*/
+
+function calculateScintPositions()
+{
+       var septa     = 2.4
+       var aperture  = 5.1
+       var  pitch     = septa + aperture
+       var sciSizeX  = 2.0
+       var tapeX     = (aperture - 2.0 * sciSizeX) * 0.25
+       
+       for (var iCol = 0; iCol < 54; iCol++)
+       {
+              var offset = iCol * pitch
+              var posLeft  = -tapeX - 0.5*sciSizeX
+              scintPos.push(offset + 0.5*pitch + posLeft)
+              var posRight =  tapeX + 0.5*sciSizeX
+              scintPos.push(offset + 0.5*pitch + posRight)
+              
+              //core.print( "  " + (iCol*2)      + " : " + (offset + 0.5*pitch + posLeft) )
+              //core.print( "  " + (iCol*2+1) + " : " + (offset + 0.5*pitch + posRight) )
+       }
+}
+
+function indexToPos(Arr)
+{
+       for (var i=0; i<Arr.length; i++)
+              Arr[i][0] = scintPos[ math.round(Arr[i][0] - 0.5) ]
+}

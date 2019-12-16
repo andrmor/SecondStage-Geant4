@@ -1,0 +1,168 @@
+
+//var data = core.loadArrayExtended3Dbinary("/home/andr/Work/Report-12/DATA/Series1/DepoScint__Series1_seed111111_shift0_runs322580.bin__.bin", 0xff, ['i', 'd', 'd','d', 'd', 'd', 's'], 0xee, ['i'])
+var data = core.loadArrayExtended3Dbinary("/home/andr/Work/Report-12/DATA/Series1/DepoScint__Series1_seed222222_shift0_runs322580.bin__.bin", 0xff, ['i', 'd', 'd','d', 'd', 'd', 's'], 0xee, ['i'])
+var size = data.length
+if (size == 0) core.abort("No data!")
+
+ var  scintPos = []
+ calculateScintPositions()
+ var numScint = scintPos.length
+ 
+ // tmp buffers
+var ArrTimeEnergy = []
+var ArrScintEnergyIn = []
+var ArrScintEnergyOut = []
+var Arr2DScintEnergyIn = []
+var Arr2DScintEnergyOut = []
+
+// file format:  0->Scint# 1->energy 2->time 3->x 4->y 5->z  6->particlename
+
+for (var i1 = 0; i1 < size; i1++)
+{
+       if (i1 % 1000 === 0) core.reportProgress(i1/size*100)
+
+       var numEl2 = data[i1].length
+       if (numEl2 === 0) continue;
+       
+       var accuIn = [];     for (var i=0; i<numScint; i++) accuIn.push( [] )
+       var accuOut = []; for (var i=0; i<numScint; i++) accuOut.push( [] )
+       for (var i2= 0; i2 < numEl2; i2++)
+       {
+              //var particle = data[i1][i2][6]
+              var idet = data[i1][i2][0]              
+              var energy = data[i1][i2][1]
+              var time = data[i1][i2][2]
+              var localTime = time % 10
+              
+              if (idet<0 || idet>=numScint) continue // core.abort(" " + idet +"  at "+ i1 + " from " + size); //while temp files
+              
+              //swap odd and even scintillators
+              if (idet % 2 === 0) idet += 1; else idet -= 1
+              
+              ArrTimeEnergy.push([localTime, energy])
+              
+              if (localTime > 1 && localTime < 3 ) // time window is from 1 to 3 ns
+              {
+                     ArrScintEnergyIn.push([idet, energy])
+                     fill2DArray(accuIn, idet, time, energy)  //cluster deposition nodes within 1 ns
+              }
+              else
+              {
+                     ArrScintEnergyOut.push([idet, energy])
+                     fill2DArray(accuOut, idet, time, energy) //cluster deposition nodes within 1 ns
+              }
+       }
+       
+       for (var iD = 0; iD < numScint; iD++)
+              for (var iRec =0; iRec < accuIn[iD].length; iRec++)
+                     Arr2DScintEnergyIn.push([idet, accuIn[iD][iRec][1], 1])
+       for (var iD=0; iD < numScint; iD++)
+              for (var iRec=0; iRec < accuOut[iD].length; iRec++)
+                     Arr2DScintEnergyOut.push([idet, accuOut[iD][iRec][1], 1])
+}
+
+grwin.ClearBasket()
+
+hist.NewHist("TimeSpectrumEnergy", 100,0,10)
+hist.SetTitles("TimeSpectrumEnergy", "Time, ns", "Deposited energy, keV")
+hist.FillArr("TimeSpectrumEnergy", ArrTimeEnergy)
+hist.SetLineProperties("TimeSpectrumEnergy", 602, 1, 2)
+hist.SetMinimum("TimeSpectrumEnergy", 0)
+hist.Draw("TimeSpectrumEnergy", "hist")
+grwin.AddToBasket("TimeSpectrumEnergy")
+
+hist.NewHist("hSensorEnergyIn", 52,0,52)
+hist.SetTitles("hSensorEnergyIn", "Sensor #", "Deposited energy, keV")
+hist.FillArr("hSensorEnergyIn", ArrScintEnergyIn)
+hist.SetMinimum("hSensorEnergyIn", 0)
+hist.Draw("hSensorEnergyIn", "hist")
+grwin.AddToBasket("SensorEnergyIn-raw")
+hist.ApplyMedianFilter("hSensorEnergyIn", 2,3)
+var arrSEI = hist.GetContent("hSensorEnergyIn")
+graph.NewGraph("SensorEnergyIn")
+indexToPos(arrSEI)
+graph.AddPoints("SensorEnergyIn", arrSEI)
+graph.SetTitles("SensorEnergyIn", "Distance, mm", "Deposited energy, keV")
+graph.SetXRange("SensorEnergyIn", 0, 195)
+graph.SetMinimum("SensorEnergyIn", 0)
+graph.Draw("SensorEnergyIn")
+grwin.AddToBasket("SensorEnergyIn")
+
+hist.NewHist("hSensorEnergyAll", 52,0,52)
+hist.SetTitles("hSensorEnergyAll", "Sensor #", "Deposited energy, keV")
+hist.FillArr("hSensorEnergyAll", ArrScintEnergyIn)
+hist.FillArr("hSensorEnergyAll", ArrScintEnergyOut)
+hist.SetMinimum("hSensorEnergyAll", 0)
+hist.Draw("hSensorEnergyAll", "hist")
+grwin.AddToBasket("hSensorEnergyAll-raw")
+hist.ApplyMedianFilter("hSensorEnergyAll", 2,3)
+var arrSEA = hist.GetContent("hSensorEnergyAll")
+graph.NewGraph("SensorEnergyAll")
+indexToPos(arrSEA)
+graph.AddPoints("SensorEnergyAll", arrSEA)
+graph.SetTitles("SensorEnergyAll", "Distance, mm", "Deposited energy, keV")
+graph.SetXRange("SensorEnergyAll", 0, 195)
+graph.SetMinimum("SensorEnergyAll", 0)
+graph.Draw("SensorEnergyAll")
+grwin.AddToBasket("SensorEnergyAll")
+
+hist.NewHist2D("2DSensorEnergyIn", 52,0,52, 100, 0, 1000)
+hist.SetTitles("2DSensorEnergyIn", "Sensor #", "Deposited energy, keV")
+hist.Fill2DArr("2DSensorEnergyIn", Arr2DScintEnergyIn)
+hist.SetMinimum("2DSensorEnergyIn", -0.01)
+hist.Draw("2DSensorEnergyIn", "colz")
+grwin.AddToBasket("2DSensorEnergyIn")
+
+hist.NewHist2D("2DSensorEnergyOut", 52,0,52, 100, 0, 1000)
+hist.SetTitles("2DSensorEnergyOut", "Sensor #", "Deposited energy, keV")
+hist.Fill2DArr("2DSensorEnergyOut", Arr2DScintEnergyOut)
+hist.SetMinimum("2DSensorEnergyOut", -0.01)
+hist.Draw("2DSensorEnergyOut", "colz")
+grwin.AddToBasket("2DSensorEnergyOut")
+
+function calculateScintPositions()
+{
+       var septa     = 2.4
+       var aperture  = 5.1
+       var  pitch     = septa + aperture
+       var sciSizeX  = 2.0
+       var tapeX     = (aperture - 2.0 * sciSizeX) * 0.25
+       
+       for (var iCol = 0; iCol < 54; iCol++)
+       {
+              var offset = iCol * pitch
+              var posLeft  = -tapeX - 0.5*sciSizeX
+              scintPos.push(offset + 0.5*pitch + posLeft)
+              var posRight =  tapeX + 0.5*sciSizeX
+              scintPos.push(offset + 0.5*pitch + posRight)
+              
+              //core.print( "  " + (iCol*2)      + " : " + (offset + 0.5*pitch + posLeft) )
+              //core.print( "  " + (iCol*2+1) + " : " + (offset + 0.5*pitch + posRight) )
+       }
+}
+
+function indexToPos(Arr)
+{
+       for (var i=0; i<Arr.length; i++)
+              Arr[i][0] = scintPos[ math.round(Arr[i][0] - 0.5) ]
+}
+
+function fill2DArray(Arr, iDet, Time, Energy)
+{
+       var numRec = Arr[iDet].length
+       if ( numRec !== 0)
+       {
+              for (var iRec = 0; iRec < numRec; iRec++)
+              {
+                     if ( Math.abs( Arr[iDet][iRec][0] - Time) < 1 )  //found a record with time shifted by less than 1 ns
+                     {
+                            Arr[iDet][iRec][0] = ( Arr[iDet][iRec][0]*Arr[iDet][iRec][1] + Time*Energy) / (Arr[iDet][iRec][1] + Energy) //shifting weighted-average time
+                            Arr[iDet][iRec][1] += Energy  //accumulating energy
+                            return
+                     }
+              }
+       }
+       
+       //if not found or empty -> add a new record       
+       Arr[iDet].push([Time, Energy])
+}

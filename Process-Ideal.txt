@@ -1,0 +1,98 @@
+
+var data = core.loadArrayExtended("/home/andr/tmp/2stages/SecStage_Ideal_111111_of_Target-1e8-0-111111-c4.txt",  ['i', 's', 'd', 'd'])
+var size = data.length
+
+var ArrTime = []
+var ArrTimeEnergy = []
+
+var ArrScintIn = []
+var ArrScintEnergyIn = []
+var ArrScintOut = []
+var ArrScintEnergyOut = []
+
+var Arr2DScintEnergyIn = []
+var Arr2DScintEnergyOut = []
+
+for (var i=0; i<size; i++)
+{
+       if (data[i][1] !== "gamma")  continue
+       
+       var idet = data[i][0]
+       var energy = data[i][2]
+       var localTime = data[i][3] % 10
+       
+       ArrTime.push([localTime, 1])
+       ArrTimeEnergy.push([localTime, energy])
+       
+       if (localTime > 1 && localTime < 3 )
+       {
+              ArrScintIn.push([idet, 1])
+              ArrScintEnergyIn.push([idet, energy])
+              Arr2DScintEnergyIn.push([idet, energy, 1])
+       }
+       else
+       {
+              ArrScintOut.push([idet, 1])
+              ArrScintEnergyOut.push([idet, energy])
+              Arr2DScintEnergyOut.push([idet, energy, 1])
+       }       
+}
+
+grwin.ClearBasket()
+
+hist.NewHist("TimeSpectrumNum", 100,0,10)
+hist.SetTitles("TimeSpectrumNum", "Time, ns", "")
+hist.FillArr("TimeSpectrumNum", ArrTime)
+hist.Draw("TimeSpectrumNum", "hist")
+grwin.AddToBasket("TimeSpectrumNum")
+
+hist.NewHist("TimeSpectrumEnergy", 100,0,10)
+hist.SetTitles("TimeSpectrumEnergy", "Time, ns", "Overall energy, keV")
+hist.FillArr("TimeSpectrumEnergy", ArrTimeEnergy)
+hist.Draw("TimeSpectrumEnergy", "hist")
+grwin.AddToBasket("TimeSpectrumEnergy")
+
+hist.NewHist("SensorIn", 52,0,52)
+hist.SetTitles("SensorIn", "Sensor #", "")
+hist.FillArr("SensorIn", ArrScintIn)
+hist.SetMinimum("SensorIn", 0)
+hist.Draw("SensorIn", "hist")
+grwin.AddToBasket("SensorIn")
+
+hist.NewHist("SensorAll", 52,0,52)
+hist.SetTitles("SensorAll", "Sensor #", "")
+hist.FillArr("SensorAll", ArrScintIn)
+hist.FillArr("SensorAll", ArrScintOut)
+hist.SetMinimum("SensorAll", 0)
+hist.Draw("SensorAll", "hist")
+grwin.AddToBasket("SensorAll")
+
+hist.NewHist("SensorEnergyIn", 52,0,52)
+hist.SetTitles("SensorEnergyIn", "Sensor #", "Sum energy, keV")
+hist.FillArr("SensorEnergyIn", ArrScintEnergyIn)
+hist.SetMinimum("SensorEnergyIn", 0)
+hist.Draw("SensorEnergyIn", "hist")
+grwin.AddToBasket("SensorEnergyIn")
+
+hist.NewHist("SensorEnergyAll", 52,0,52)
+hist.SetTitles("SensorEnergyAll", "Sensor #", "Sum energy, keV")
+hist.FillArr("SensorEnergyAll", ArrScintEnergyIn)
+hist.FillArr("SensorEnergyAll", ArrScintEnergyOut)
+hist.SetMinimum("SensorEnergyAll", 0)
+hist.Draw("SensorEnergyAll", "hist")
+grwin.AddToBasket("SensorEnergyAll")
+
+hist.NewHist2D("2DSensorEnergyIn", 52,0,52, 50, 0, 10000)
+hist.SetTitles("2DSensorEnergyIn", "Sensor #", "Energy, keV")
+hist.Fill2DArr("2DSensorEnergyIn", Arr2DScintEnergyIn)
+hist.SetMinimum("2DSensorEnergyIn", -0.01)
+hist.Draw("2DSensorEnergyIn", "colz")
+grwin.AddToBasket("2DSensorEnergyIn")
+
+hist.NewHist2D("2DSensorEnergyOut", 52,0,52, 50, 0, 10000)
+hist.SetTitles("2DSensorEnergyOut", "Sensor #", "Energy, keV")
+hist.Fill2DArr("2DSensorEnergyOut", Arr2DScintEnergyOut)
+hist.SetMinimum("2DSensorEnergyOut", -0.01)
+hist.Draw("2DSensorEnergyOut", "colz")
+grwin.AddToBasket("2DSensorEnergyOut")
+

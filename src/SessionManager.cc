@@ -282,10 +282,11 @@ void SessionManager::readEventFromTextInput()
         std::string particle;
 
         std::stringstream ss(line);  // units in file are mm keV and ns
-        ss >> particle >> r.Energy >> r.Time
+        ss >> particle
+           >> r.Energy
            >> r.Position[0]  >> r.Position[1] >>  r.Position[2]
-           >> r.Direction[0] >> r.Direction[1] >> r.Direction[2];
-
+           >> r.Direction[0] >> r.Direction[1] >> r.Direction[2]
+           >> r.Time;
         if (ss.fail())
             terminateSession("Unexpected format of a line in the file with the input particles");
 
@@ -310,14 +311,7 @@ void SessionManager::readEventFromBinaryInput()
         else if (header == char(0xff))
         {
             ParticleRecord r;
-            inStream->read((char*)&r.Energy,       sizeof(double));
-            inStream->read((char*)&r.Time,         sizeof(double));
-            inStream->read((char*)&r.Position[0],  sizeof(double));
-            inStream->read((char*)&r.Position[1],  sizeof(double));
-            inStream->read((char*)&r.Position[2],  sizeof(double));
-            inStream->read((char*)&r.Direction[0], sizeof(double));
-            inStream->read((char*)&r.Direction[1], sizeof(double));
-            inStream->read((char*)&r.Direction[2], sizeof(double));
+
             char ch;
             std::string str;
             while (*inStream >> ch)
@@ -325,6 +319,15 @@ void SessionManager::readEventFromBinaryInput()
                 if (ch == 0x00) break;
                 str += ch;
             }
+            inStream->read((char*)&r.Energy,       sizeof(double));
+            inStream->read((char*)&r.Position[0],  sizeof(double));
+            inStream->read((char*)&r.Position[1],  sizeof(double));
+            inStream->read((char*)&r.Position[2],  sizeof(double));
+            inStream->read((char*)&r.Direction[0], sizeof(double));
+            inStream->read((char*)&r.Direction[1], sizeof(double));
+            inStream->read((char*)&r.Direction[2], sizeof(double));
+            inStream->read((char*)&r.Time,         sizeof(double));
+
             if (inStream->fail())
                 terminateSession("Unexpected format of a line in the binary file with the input particles");
 

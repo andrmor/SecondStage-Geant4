@@ -12,22 +12,26 @@
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 //
 // File formats
-//   Input
-//     for ascii files
-//       new event line: #EventNumber
-//       new record:     ParticleName Energy[keV] Time[ns] X[mm] Y[mm] Z[mm] DirX DirY DirZ
-//     for binary files
-//       new event line: 0xEE(char) EventNumber(int)
-//       new record:     0xFF(char) Energy(double)[keV] Time(double)[ns] X(double)[mm] Y(double)[mm] Z(double)[mm] DirX(double)[mm] DirY(double)[mm] DirZ(double)[mm] ParticleName(string) 0x00(char)
 //
-//   Output for ascii mode
+// INPUT
+//
+//  Binary:
+//       new event line: 0xEE(char) EventNumber(int)
+//       new record:     0xFF(char) ParticleName(string) 0x00(char) Energy(double)[keV] X(double)[mm] Y(double)[mm] Z(double)[mm] DirX(double)[mm] DirY(double)[mm] DirZ(double)[mm] Time(double)[ns]
+//  Ascii:
+//       new event:      #EventNumber
+//       new record:     ParticleName Energy[keV] X[mm] Y[mm] Z[mm] DirX[mm] DirY[mm] DirZ[mm] Time[ns]
+//
+// OUTPUT
+//
+//   Ascii:
 //     in config with ideal detectors:
 //       new event line: #EventNumber
 //       new record:     IdelDetIndex ParticleName Energy[keV] Time[ns]
 //     in config with scintillators:
 //       new event line: #EventNumber
 //       new record:     ScintIndex ParticleName EnergyDeposition[keV] Time[ns] X[mm] Y[mm] Z[mm]
-//   Output for binary mode
+//   Binary:
 //     in config with ideal detectors:
 //          new event line: 0xEE(char) EventNumber(int)
 //          new record:     0xFF(char) ScintNumber(int) ParticleEnergy(double)[keV] Time(double)[ns] ParticleName(string) 0x00(char)
@@ -43,25 +47,30 @@ int main(int argc, char** argv)
 
     // --- user inits ---
 
-    SM.bGuiMode = false;
+    SM.bGuiMode             = false;
 
-    SM.DetectorType = SessionManager::IdealDetectors;
-    //SM.DetectorType = SessionManager::Scintillators;
+    SM.bYAP                 = true;
+    SM.bTwoScintPerAperture = false;
+
+    //SM.DetectorType       = SessionManager::IdealDetectors;
+    SM.DetectorType         = SessionManager::Scintillators;
 
     long Seed               = 111111;
 
     SM.TimeLimit            = 3.13e6; // ignore all particles appearing 0.00313+ ms after the start of irradiation
 
-    std::string WorkingDir  = "/home/andr/tmp/2stages";
+    std::string WorkingDir  = "/home/andr/WORK/ants-proto/G6";
 
     SM.bBinaryInput         = true;
-    std::string InputFile   = "test_seed111111_shift0_runs1000.bin";
+    std::string InputFile   = "g6-0-60000.bin";
 
     SM.bBinaryOutput        = true;
 
     SM.OutputPrecision      = 8; // only affects ascii output
 
     // --- end of user inits ---
+
+
 
     SM.FileName_Input  = WorkingDir + "/" + InputFile;
 

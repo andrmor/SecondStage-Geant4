@@ -49,6 +49,9 @@ class SessionManager
         bool bBinaryOutput          = false;
         std::string FileName_Output;
 
+        bool bYAP                   = true;  // YAP or GSO
+        bool bTwoScintPerAperture   = false;
+
         double TimeLimit            = 3.13e6;
         int OutputPrecision         = 8;
 

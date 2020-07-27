@@ -35,7 +35,20 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     elements.push_back("Si");     natoms.push_back(1);
     elements.push_back("O");      natoms.push_back(5);
     G4double density = 6.7*g/cm3;
-    G4Material * matScint = man->ConstructNewMaterial("GSO", elements, natoms, density);
+    G4Material * matGSO = man->ConstructNewMaterial("GSO", elements, natoms, density);
+
+    //https://www.advatech-uk.co.uk/yap_ce.html
+    //YAlO3 (Ce 0.5%)
+    natoms.clear();
+    elements.clear();
+    elements.push_back("Y");     natoms.push_back(40);  // 1
+    elements.push_back("Al");    natoms.push_back(40);  // 1
+    elements.push_back("O");     natoms.push_back(120); // 3
+    elements.push_back("Ce");    natoms.push_back(1);   // 1/201 = 0.5%
+    density = 5.37*g/cm3;
+    G4Material * matYAP = man->ConstructNewMaterial("YAP", elements, natoms, density);
+
+    G4Material * matScint = ( SM.bYAP ? matYAP : matGSO);
 
     G4Material * matTeflon = man->FindOrBuildMaterial("G4_TEFLON");
     G4Material * matW = man->FindOrBuildMaterial("G4_W");
@@ -48,19 +61,23 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
     // -- Geometry --
 
+    // adjustable in optimization
+    G4double colSizeZ  = 200.0*mm; // height
+    G4double septa     = 2.4*mm;
+    G4double sciSizeX  = 2.0*mm;
+
     G4double BeamToCollSurface = 250.0*mm;
 
     G4double colSizeX  = 200.0*mm; // along the beam
     G4double colSizeY  = 500.0*mm; // width
-    G4double colSizeZ  = 200.0*mm; // height
+    G4double tapeX     = 0.275*mm; //(aperture - 2.0 * sciSizeX) * 0.25;
+    G4double sciSizeZ  = 30.0*mm;
 
-    G4double septa     = 2.4*mm;
-    G4double aperture  = 5.1*mm;
+    G4double aperture  = (SM.bTwoScintPerAperture ? 2.0*sciSizeX + 4.0*tapeX
+                                                  :     sciSizeX + 2.0*tapeX);
+
     G4double pitch     = septa + aperture;
 
-    G4double sciSizeX  = 2.0*mm; // should be < 0.5*aperture !
-    G4double sciSizeZ  = 30.0*mm;
-    G4double tapeX     = (aperture - 2.0 * sciSizeX) * 0.25;
 
     G4int    numEl     = colSizeX / pitch;
     //numEl = 1;
@@ -75,7 +92,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     G4LogicalVolume   * logicWorld = new G4LogicalVolume(solidWorld, matVacuum, "World");
     G4VPhysicalVolume * physWorld = new G4PVPlacement(nullptr, G4ThreeVector(0.0, 0.0, 0.0), logicWorld, "World", 0, false, 0);
     logicWorld->SetVisAttributes(G4VisAttributes(G4Colour(0.0, 1.0, 0.0)));
-    logicWorld->SetVisAttributes(G4VisAttributes::Invisible);
+    //logicWorld->SetVisAttributes(G4VisAttributes::Invisible);
 
     G4VSolid * solidColBlade = new G4Box("ColBlade", 0.5*septa, 0.5*colSizeY, 0.5*colSizeZ);
     G4VSolid * solidTeflon   = new G4Box("Teflon", 0.5*aperture, 0.5*colSizeY, 0.5*sciSizeZ);
@@ -112,44 +129,69 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
             G4double teflonBoxZ = -BeamToCollSurface - colSizeZ + 0.5*sciSizeZ;
             new G4PVPlacement(nullptr, G4ThreeVector(offset + 0.5*pitch, 0, teflonBoxZ), logicTeflon, "Tf", logicWorld, true, iCol);
 
-            //scintillator: Left
-            G4LogicalVolume * logicScintL = new G4LogicalVolume(solidScint, matScint, "ScintL");
-            logicScintL->SetSensitiveDetector(pSD_Scint);
-            logicScintL->SetVisAttributes(G4VisAttributes(G4Colour(1.0, 1.0, 1.0)));
-            G4double posLeft  = -tapeX - 0.5*sciSizeX;
-            new G4PVPlacement(nullptr, G4ThreeVector(posLeft , 0, 0), logicScintL, "ScL", logicTeflon, true, iCol*2);
-            scintPos.push_back(offset + 0.5*pitch + posLeft);
-            //scintillator: Right
-            G4LogicalVolume * logicScintR = new G4LogicalVolume(solidScint, matScint, "ScintR");
-            logicScintR->SetSensitiveDetector(pSD_Scint);
-            logicScintR->SetVisAttributes(G4VisAttributes(G4Colour(1.0, 1.0, 1.0)));
-            G4double posRight =  tapeX + 0.5*sciSizeX;
-            new G4PVPlacement(nullptr, G4ThreeVector(posRight, 0, 0), logicScintR, "ScR", logicTeflon, true, iCol*2+1);
-            scintPos.push_back(offset + 0.5*pitch + posRight);
-
-            //teflon wall splitters
-            for (int iW = 0; iW< HalfNumWalls; iW++)
+            if (SM.bTwoScintPerAperture)
             {
-                new G4PVPlacement(nullptr, G4ThreeVector(0, slabSize*iW, 0), logicWall, "Wall", logicScintL, true, iCounter++);
-                if (iW != 0)
-                    new G4PVPlacement(nullptr, G4ThreeVector(0, -slabSize*iW, 0), logicWall, "Wall", logicScintL, true, iCounter++);
+                //scintillator: Left
+                G4LogicalVolume * logicScintL = new G4LogicalVolume(solidScint, matScint, "ScintL");
+                logicScintL->SetSensitiveDetector(pSD_Scint);
+                logicScintL->SetVisAttributes(G4VisAttributes(G4Colour(1.0, 1.0, 1.0)));
+                G4double posLeft  = -tapeX - 0.5*sciSizeX;
+                new G4PVPlacement(nullptr, G4ThreeVector(posLeft , 0, 0), logicScintL, "ScL", logicTeflon, true, iCol*2);
+                scintPos.push_back(offset + 0.5*pitch + posLeft);
+                //scintillator: Right
+                G4LogicalVolume * logicScintR = new G4LogicalVolume(solidScint, matScint, "ScintR");
+                logicScintR->SetSensitiveDetector(pSD_Scint);
+                logicScintR->SetVisAttributes(G4VisAttributes(G4Colour(1.0, 1.0, 1.0)));
+                G4double posRight =  tapeX + 0.5*sciSizeX;
+                new G4PVPlacement(nullptr, G4ThreeVector(posRight, 0, 0), logicScintR, "ScR", logicTeflon, true, iCol*2+1);
+                scintPos.push_back(offset + 0.5*pitch + posRight);
 
-                new G4PVPlacement(nullptr, G4ThreeVector(0, slabSize*iW, 0), logicWall, "Wall", logicScintR, true, iCounter++);
-                if (iW != 0)
-                    new G4PVPlacement(nullptr, G4ThreeVector(0, -slabSize*iW, 0), logicWall, "Wall", logicScintR, true, iCounter++);
+                //teflon wall splitters
+                for (int iW = 0; iW< HalfNumWalls; iW++)
+                {
+                    new G4PVPlacement(nullptr, G4ThreeVector(0, slabSize*iW, 0), logicWall, "Wall", logicScintL, true, iCounter++);
+                    if (iW != 0)
+                        new G4PVPlacement(nullptr, G4ThreeVector(0, -slabSize*iW, 0), logicWall, "Wall", logicScintL, true, iCounter++);
+
+                    new G4PVPlacement(nullptr, G4ThreeVector(0, slabSize*iW, 0), logicWall, "Wall", logicScintR, true, iCounter++);
+                    if (iW != 0)
+                        new G4PVPlacement(nullptr, G4ThreeVector(0, -slabSize*iW, 0), logicWall, "Wall", logicScintR, true, iCounter++);
+                }
+            }
+            else
+            {
+                G4LogicalVolume * logicScint = new G4LogicalVolume(solidScint, matScint, "Scint");
+                logicScint->SetSensitiveDetector(pSD_Scint);
+                logicScint->SetVisAttributes(G4VisAttributes(G4Colour(1.0, 1.0, 1.0)));
+                new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 0), logicScint, "Sc", logicTeflon, true, iCol);
+                scintPos.push_back(offset + 0.5*pitch);
+
+                //teflon wall splitters
+                for (int iW = 0; iW< HalfNumWalls; iW++)
+                {
+                    new G4PVPlacement(nullptr, G4ThreeVector(0, slabSize*iW, 0), logicWall, "Wall", logicScint, true, iCounter++);
+                    if (iW != 0)
+                        new G4PVPlacement(nullptr, G4ThreeVector(0, -slabSize*iW, 0), logicWall, "Wall", logicScint, true, iCounter++);
+                }
             }
         }
         else
         {
             G4double Z = -BeamToCollSurface - colSizeZ;
-            G4double posLeft   = offset + 0.5*pitch  - tapeX - 0.5*sciSizeX;
-            new G4PVPlacement(nullptr, G4ThreeVector(posLeft, 0, Z), logicIdeal, "IdealL", logicWorld, true, iCounter++);
-            G4double posRight  = offset + 0.5*pitch  + tapeX + 0.5*sciSizeX;
-            new G4PVPlacement(nullptr, G4ThreeVector(posRight, 0, Z), logicIdeal, "IdealL", logicWorld, true, iCounter++);
+            if (SM.bTwoScintPerAperture)
+            {
+                G4double posLeft   = offset + 0.5*pitch  - tapeX - 0.5*sciSizeX;
+                new G4PVPlacement(nullptr, G4ThreeVector(posLeft, 0, Z), logicIdeal, "IdealL", logicWorld, true, iCounter++);
+                G4double posRight  = offset + 0.5*pitch  + tapeX + 0.5*sciSizeX;
+                new G4PVPlacement(nullptr, G4ThreeVector(posRight, 0, Z), logicIdeal, "IdealL", logicWorld, true, iCounter++);
+            }
+            else
+            {
+                new G4PVPlacement(nullptr, G4ThreeVector(offset + 0.5*pitch, 0, Z), logicIdeal, "Ideal", logicWorld, true, iCounter++);
+            }
         }
 
     }
 
     return physWorld;
 }
-

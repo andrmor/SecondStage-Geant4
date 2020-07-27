@@ -57,7 +57,7 @@ int main(int argc, char** argv)
 
     long Seed               = 111111;
 
-    SM.TimeLimit            = 3.13e6; // ignore all particles appearing 0.00313+ ms after the start of irradiation
+    SM.TimeLimit            = 3.23e6; // ignore all particles appearing 3.23+ ms after the beam start
 
     std::string WorkingDir  = "/home/andr/WORK/ants-proto/G6";
 

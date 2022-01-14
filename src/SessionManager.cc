@@ -156,7 +156,7 @@ void SessionManager::saveRecord_Ideal(const std::string & particleName, int scin
              << energy << ' '
              << time;
 
-        *outStream << text.rdbuf() << std::endl;
+        *outStream << text.rdbuf() << '\n';
     }
 }
 
@@ -184,7 +184,7 @@ void SessionManager::saveRecord_Scint(const std::string & particleName, int scin
              << time << ' '
              << pos[0] << ' ' << pos[1] << ' ' << pos[2];
 
-        *outStream << text.rdbuf() << std::endl;
+        *outStream << text.rdbuf() << '\n';
     }
 }
 
@@ -197,7 +197,7 @@ void SessionManager::saveEventNumber() const
     }
     else
     {
-        *outStream << '#' << NextEventId << std::endl;
+        *outStream << '#' << NextEventId << '\n';
     }
 }
 

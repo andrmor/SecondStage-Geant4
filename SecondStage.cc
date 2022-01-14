@@ -17,10 +17,12 @@
 //
 //  Binary:
 //       new event line: 0xEE(char) EventNumber(int)
-//       new record:     0xFF(char) ParticleName(string) 0x00(char) Energy(double)[keV] X(double)[mm] Y(double)[mm] Z(double)[mm] DirX(double)[mm] DirY(double)[mm] DirZ(double)[mm] Time(double)[ns]
+//       new record:     0xFF(char) ParticleName(string) 0x00(char) Energy(double)[keV] X(double)[mm] Y(double)[mm] Z(double)[mm] DirX(double) DirY(double) DirZ(double) Time(double)[ns]
 //  Ascii:
 //       new event:      #EventNumber
-//       new record:     ParticleName Energy[keV] X[mm] Y[mm] Z[mm] DirX[mm] DirY[mm] DirZ[mm] Time[ns]
+//       new record:     ParticleName Energy[keV] X[mm] Y[mm] Z[mm] DirX DirY DirZ Time[ns]
+//
+//    DirXYZ is a unit vector
 //
 // OUTPUT
 //
@@ -121,7 +123,7 @@ int main(int argc, char** argv)
 
     SM.startSession();
 
-    G4VisManager* visManager = 0;
+    G4VisManager * visManager = nullptr;
 
     if (SM.bGuiMode)
     {
